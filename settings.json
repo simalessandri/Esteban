@@ -1,0 +1,38 @@
+{
+  "Esteban":{
+    "logging_port":8004
+  },
+
+  "CameraBot": {
+      "fastapi_port": 8001,
+      "streaming_size": [1536, 864],
+      "photo_size": [2500,1500],
+      "fps_streaming": 10
+  },
+  "ShowBot": {
+      "port": 8000,
+      "camerabot_port": 8001
+  },
+  "Palmist": {
+      "fastapi_port": 8002,
+      "fps_streaming": 1,  
+      "confidence_threshold": 0.5, 
+      "gesture_model_path": "gesture_recognizer.task", 
+      "position_offest":0.05
+  },
+  "Brainy": {
+      "ok_cooldown": 5,
+      "open_palm_cooldown":1
+  },
+  "Dummy": {
+    "api_port": 8003,
+    "pin_horizontal": 17,
+    "pin_vertical": 18,
+    "buzzer_pin":21
+  },
+  "queue": {
+      "host": "localhost",
+      "port": 6379,
+      "db": 0
+  }
+}

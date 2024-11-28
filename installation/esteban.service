@@ -1,0 +1,13 @@
+[Unit]
+Description=Esteban Microservice Manager
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/pi/estevan/esteban.py
+WorkingDirectory=/home/pi/estevan
+User=pi
+Restart=always
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target

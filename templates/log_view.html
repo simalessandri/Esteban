@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Files</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .filter { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Log Files</h1>
+    <ul>
+        {% for file in log_files %}
+            <li><a href="/logs/{{ file }}">{{ file }}</a></li>
+        {% endfor %}
+    </ul>
+
+    <h2>Log Entries</h2>
+    <div class="filter">
+        <label for="level">Filter by Type:</label>
+        <select id="level" name="level" onchange="filterLogs()">
+            <option value="">All</option>
+            <option value="INFO">INFO</option>
+            <option value="ERROR">ERROR</option>
+            <option value="WARNING">WARNING</option>
+            <!-- Add more log types as needed -->
+        </select>
+
+        <label for="service">Filter by Service:</label>
+        <input type="text" id="service" name="service" oninput="filterLogs()" placeholder="Enter service name">
+    </div>
+
+    <table id="logTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Service</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in log_entries %}
+                <tr data-type="{{ entry.type }}" data-service="{{ entry.service }}">
+                    <td>{{ entry.date }}</td>
+                    <td>{{ entry.type }}</td>
+                    <td>{{ entry.service }}</td>
+                    <td>{{ entry.message }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        function filterLogs() {
+            const typeFilter = document.getElementById('level').value.toUpperCase();
+            const serviceFilter = document.getElementById('service').value.toUpperCase();
+            const rows = document.querySelectorAll('#logTable tbody tr');
+
+            rows.forEach(row => {
+                const logType = row.getAttribute('data-type').toUpperCase();
+                const service = row.getAttribute('data-service').toUpperCase();
+                const typeMatch = typeFilter === '' || logType === typeFilter;
+                const serviceMatch = serviceFilter === '' || service.includes(serviceFilter);
+
+                row.style.display = (typeMatch && serviceMatch) ? '' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>

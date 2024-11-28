@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShowBot Interface</title>
+
+    <style>
+        body {
+            display: block;
+            margin: 0px;
+}
+        p#gestureDisplay {
+            background: white;
+            width: auto;
+            position: absolute;
+            bottom: 0;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        .container {
+            position: relative;
+            width: 100%;
+                }
+        /* Center container */
+        #camera-control-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+        }
+        #videoStream{
+
+            width: 100%; /* Ensure they both occupy the same width */
+            display: block; /* Ensure image is block element */
+            max-height: 100vh;
+        }
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none; /* Allow clicks to pass through to video controls */
+            width:100%;
+            height:100%;
+        }
+        /* Grid layout for the keypad */
+        #camera-control {
+            display: grid;
+            grid-template-columns: 50px 50px 50px;
+            gap: 10px;
+            align-items: center;
+            justify-items: center;
+        }
+    
+        /* Styling for all buttons */
+        #camera-control button {
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+    
+        /* Hover effect for buttons */
+        #camera-control button:hover {
+            background-color: #e0e0e0;
+        }
+    
+        /* Active/pressed effect */
+        #camera-control button:active {
+            transform: scale(0.95);
+        }
+    
+        /* Special styling for the "Take Photo" button */
+        #camera-control button.take-photo {
+            background-color: #ff6868;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+    
+        /* Hover effect for "Take Photo" button */
+        #camera-control button.take-photo:hover {
+            background-color: #ff5757;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <p id="gestureDisplay">Current Gesture: No gesture</p>
+        <div id="camera-control-container">
+            <div id="camera-control">
+                <div></div>
+                <button onclick="moveCamera('up')">⬆️</button>
+                <div></div>
+                
+                <button onclick="moveCamera('left')">⬅️</button>
+                <button onclick="takePhoto()" class="take-photo">📷</button>
+                <button onclick="moveCamera('right')">➡️</button>
+                
+                <div></div>
+                <button onclick="moveCamera('down')">⬇️</button>
+                <div></div>
+            </div>
+        </div>
+        <img id="videoStream" alt="Stream" />
+        <canvas id="overlayCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("overlayCanvas");
+        const context = canvas.getContext("2d");
+        const videoStream = document.getElementById("videoStream");
+
+        // Define the desired frame rate (frames per second)
+        const desiredFPS = 10;
+        const frameInterval = 1000 / desiredFPS; // Calculate interval in milliseconds
+        let lastFrameTime = 0; // To track the last frame processing time
+
+        // WebSocket URL for MJPEG stream
+        const wsStreamUrl = `ws://${window.location.hostname}:{{ camerabot_port }}/stream`;
+        const wsStream = new WebSocket(wsStreamUrl);
+        wsStream.binaryType = "blob"; // Set binary type to blob
+
+        wsStream.onmessage = (event) => {
+            if (!document.hidden) {
+            const currentTime = Date.now();
+            
+            // Check if enough time has passed since the last frame was processed
+            if (currentTime - lastFrameTime >= frameInterval) {
+                // Update the last frame time
+                lastFrameTime = currentTime;
+
+                // Create a URL from the incoming blob
+                const url = URL.createObjectURL(event.data);
+                videoStream.src = url; // Set the image src to the blob URL
+
+                // Release the object URL after it is set to prevent memory leaks
+                videoStream.onload = () => {
+                    URL.revokeObjectURL(url);
+                };
+            } 
+            }
+        };
+
+        // Adjust canvas to match image dimensions when the image loads
+        videoStream.onload = () => {
+            canvas.width = videoStream.clientWidth;
+            canvas.height = videoStream.clientHeight;
+        };
+
+        // WebSocket for gesture and hand position updates
+        const wsGestureUrl = `ws://${window.location.hostname}:{{ self_port }}/ws`;
+        const wsGesture = new WebSocket(wsGestureUrl);
+
+        let gestureTimeout;
+        function updateGestureDisplay(gesture) {
+            clearTimeout(gestureTimeout);
+            gestureTimeout = setTimeout(() => {
+                document.getElementById("gestureDisplay").innerText = `Current Gesture: ${gesture || 'No gesture detected'}`;
+            }, 100);  // Adjust delay as needed
+        }
+
+        let lastHandPos = { x: 0, y: 0 };
+        function drawHandPosition(x, y) {
+            if (Math.abs(x - lastHandPos.x) < 5 && Math.abs(y - lastHandPos.y) < 5) return; // Skip if hand moved insignificantly
+
+            lastHandPos = { x, y };
+
+            context.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas before each draw
+            context.beginPath();
+            context.arc(x, y, 5, 0, 2 * Math.PI); // Use a smaller radius for the circle
+            context.fillStyle = "rgba(255, 0, 0, 0.7)"; // Semi-transparent red
+            context.fill();
+            context.closePath();
+        }
+
+        wsGesture.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            updateGestureDisplay(data.gesture);
+
+            if (data.hand_pos) {
+                const denormalizedX = data.hand_pos.x * canvas.width;
+                const denormalizedY = data.hand_pos.y * canvas.height;
+                if(!(denormalizedX==0 && denormalizedY==0))
+                drawHandPosition(denormalizedX, denormalizedY);
+            }
+        };
+
+        async function takePhoto() {
+            await fetch("/take_photo", { method: "POST" });
+        }
+
+        async function moveCamera(direction) {
+            try {
+                const response = await fetch("/move_camera", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ direction: direction })
+                });
+
+                const data = await response.json();
+                if (data.status === "success") {
+                    console.log(`Camera moved ${direction}:`, data);
+                } else {
+                    console.error(`Failed to move camera ${direction}:`, data);
+                }
+            } catch (error) {
+                console.error(`Error moving camera ${direction}:`, error);
+            }
+        }
+    </script>
+</body>
+</html>

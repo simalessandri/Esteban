@@ -1,0 +1,27 @@
+<!-- templates/gallery.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Photo Gallery</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .gallery { display: flex; flex-wrap: wrap; gap: 10px; }
+        .photo { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        .photo img { max-width: 150px; max-height: 150px; display: block; margin-bottom: 5px; }
+        .download-btn { background-color: #4CAF50; color: white; padding: 5px 10px; text-decoration: none; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>Photo Gallery</h1>
+    <a href="/photos/download_all" class="download-btn">Download All Photos</a>
+    <div class="gallery">
+        {% for photo in photos %}
+        <div class="photo">
+            <img src="/photos/{{ photo }}" alt="{{ photo }}">
+            <a href="/photos/{{ photo }}" download="{{ photo }}" class="download-btn">Download</a>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
